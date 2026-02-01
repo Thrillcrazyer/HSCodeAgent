@@ -435,11 +435,11 @@ class UnipassHSScraper:
     def go_to_next_page_group(self) -> bool:
         """다음 10페이지 그룹으로 이동 (품목분류사례와 상세보기 사이)"""
         try:
-            # 품목분류사례(h2)와 상세보기(h2) 사이에 있는 "다음10페이지" 버튼 찾기
+            # 품목분류사례(h2) 다음에 있는 "다음10페이지" 버튼 찾기
+            # HTML 구조: <a href="#11"><span>다음10페이지</span></a>
             next_group_btn = self.wait.until(
                 EC.element_to_be_clickable((By.XPATH, 
-                    "//h2[contains(text(), '품목분류사례')]/following::span[contains(text(), '다음10페이지')][1]/parent::a | "
-                    "//h2[contains(text(), '품목분류사례')]/following::a[contains(@title, '다음10페이지')][1]"
+                    "//h2[contains(text(), '품목분류사례')]/following::a[span[contains(text(), '다음10페이지')]][1]"
                 ))
             )
             next_group_btn.click()
@@ -469,7 +469,6 @@ class UnipassHSScraper:
             
             case_index = 0
             current_page = 1
-            current_page_group = 1  # 현재 페이지 그룹 (1~10, 11~20, ...)
             
             while current_page <= total_pages:
                 print(f"\n--- {current_page}/{total_pages} 페이지 처리 중 ---")
@@ -502,23 +501,19 @@ class UnipassHSScraper:
                         print(f"    사례 {case_index} 처리 중 오류: {e}")
                         continue
                 
-                # 현재 페이지에서 10개 다운로드 완료
+                # 현재 페이지에서 다운로드 완료
                 print(f"  페이지 {current_page} 처리 완료 ({case_count}건)")
                 
                 # 다음 페이지로 이동
                 current_page += 1
                 if current_page <= total_pages:
-                    # 현재 페이지 그룹 내에서 이동할 페이지 번호 계산
-                    page_in_current_group = ((current_page - 1) % 10) + 1
-                    
-                    # 10페이지 그룹의 마지막 페이지였으면 (10, 20, 30...) 다음 그룹으로 이동
-                    if page_in_current_group == 1 and current_page > 1:
+                    # 10페이지마다 "다음10페이지" 버튼 클릭 (10 -> 11, 20 -> 21, 30 -> 31, ...)
+                    if (current_page - 1) % 10 == 0:
                         # 다음 10페이지 그룹으로 이동
                         print(f"\n  === 다음 10페이지 그룹으로 이동 (페이지 {current_page}~) ===")
                         if not self.go_to_next_page_group():
                             print("  다음 페이지 그룹이 없습니다. 스크래핑 종료.")
                             break
-                        current_page_group += 1
                     else:
                         # 같은 그룹 내에서 페이지 번호 버튼 클릭
                         if not self.go_to_page(current_page):
